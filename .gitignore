@@ -1,0 +1,13 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+MacLocalFileManager/.venv/
+MacLocalFileManager/build/
+MacLocalFileManager/dist/
+MacLocalFileManager/data/*.sqlite3
+MacLocalFileManager/data/*.sqlite3-*
+MacLocalFileManager/logs/*
+!MacLocalFileManager/logs/.gitkeep
+

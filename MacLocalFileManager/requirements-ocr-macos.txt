@@ -1,0 +1,4 @@
+# Optional: install this on macOS when you want real system Vision OCR.
+pyobjc-framework-Vision
+pyobjc-framework-Quartz
+

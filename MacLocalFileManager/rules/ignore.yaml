@@ -1,0 +1,12 @@
+ignored_names:
+  - .git
+  - node_modules
+  - __pycache__
+  - pycache
+  - .DS_Store
+protected_paths:
+  - /System
+  - /Library
+  - ~/Library
+  - /Applications
+

@@ -1,0 +1,60 @@
+categories:
+  - name: 工资表
+    target_dir: 工资表
+    match_mode: keyword_and_extension
+    filename_keywords:
+      - 工资
+      - 工资表
+      - 薪资
+    extensions:
+      - xlsx
+      - xls
+      - csv
+
+  - name: 考勤表
+    target_dir: 考勤表
+    match_mode: keyword_and_extension
+    filename_keywords:
+      - 考勤
+      - 打卡
+      - 出勤
+    extensions:
+      - xlsx
+      - xls
+      - csv
+
+  - name: 合同
+    target_dir: 合同
+    match_mode: keyword_and_extension
+    filename_keywords:
+      - 合同
+      - 协议
+    extensions:
+      - pdf
+      - docx
+
+  - name: 图纸
+    target_dir: 图纸
+    match_mode: any
+    filename_keywords:
+      - 图纸
+      - 平面图
+      - 立面图
+      - 大样
+    extensions:
+      - dwg
+      - dxf
+      - pdf
+
+  - name: 付款截图
+    target_dir: 付款截图
+    match_mode: keyword_and_extension
+    filename_keywords:
+      - 付款
+      - 转账
+      - 收款
+    extensions:
+      - png
+      - jpg
+      - jpeg
+      - heic
