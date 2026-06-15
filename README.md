@@ -1,48 +1,58 @@
 # MacLocalFileManager
 
-MacLocalFileManager 是一个免费开源的 macOS 本地聚合搜索工具，目标是做成更接近 Spotlight 的轻量入口：打开即搜，输入后展开结果，尽量不打扰当前工作流。
+MacLocalFileManager 是一个免费开源的 macOS 本地聚合搜索工具。
 
-当前版本聚焦本机文件、图片、文档、剪切板方向的本地检索体验，不依赖在线 AI，不上传文件内容。
+它的起因很简单：macOS 自带搜索有时候真的让人挠头。
 
-A free and open-source Spotlight-like local search tool for macOS.
+Spotlight 打开 App 很快，但真要找某个 Word、PDF、截图、图纸、压缩包，尤其是中文文件名和一堆工程资料混在一起的时候，经常像在猜谜。Finder 搜索也能用，但入口重、反馈慢，还总让人感觉“它到底搜没搜正文？”
 
-对于中文文件名、Office/PDF 正文、图片 OCR、分类筛选和工程资料检索这类场景，它比 Apple Spotlight 和 Finder 搜索更直接、更好用。
+所以我做了这个小工具：打开就是搜索，输入后展开结果，把文件名、路径、文档正文、图片 OCR、分类筛选放到一个更直接的窗口里。不依赖在线 AI，不上传文件内容，索引都留在本机。
 
-For Chinese filenames, Office/PDF content, image OCR text, category filters, and engineering-document workflows, it aims to be more direct and practical than Apple Spotlight and Finder search.
+A free and open-source Spotlight-like local search tool for macOS. It is built for the moments when Spotlight is too vague and Finder search feels too clumsy.
 
 ## 界面预览
 
-折叠态保持轻量，不占用屏幕注意力。打开后位于屏幕上方黄金分割阅读位，适合快速输入关键词。
+折叠态尽量安静，不占屏幕。唤出来就能打字，不用先点进某个文件夹。
 
 ![Collapsed Spotlight-like search window](MacLocalFileManager/docs/ui/v8-spotlight-home.png)
 
-输入关键词后自动展开结果窗口，搜索框、筛选栏、图片识别结果和文件列表集中在同一个透明圆角界面里。
+输入关键词后自动展开。图片、文件、路径、摘要、筛选都在一个窗口里，不用在 Spotlight、Finder、预览和一堆窗口之间来回切。
 
 ![Expanded local search results window](MacLocalFileManager/docs/ui/v8-ui-entry-mvp.png)
 
 ## 为什么做这个
 
-Spotlight 适合快速打开应用和系统项目，Finder 搜索适合在文件夹里查找文件。但在真实本地资料场景里，尤其是中文文件名、Word/Excel/PDF 正文、图片 OCR、压缩包、图纸、CAD、清单等资料混在一起时，搜索入口经常不够直接。
+不是说 Spotlight 不好。它很适合打开应用、算个数、搜系统项目。
 
-MacLocalFileManager 试图把这些日常需求放在一个更清晰的本地窗口里：
+但如果你的电脑里有这些东西：
+
+- 一堆叫“最终版”“最新版”“真的最终版”的文档。
+- Word、Excel、PDF 正文里才有关键词，文件名完全看不出来。
+- 截图里有付款、合同、发票、图纸节点，但系统搜索基本帮不上忙。
+- 工程资料里混着图纸、CAD、清单、压缩包，Finder 搜一次像开盲盒。
+- 中文文件名很多，拼音、简称、模糊关键词都想试一试。
+
+那原生搜索体验就开始变得别扭了。
+
+MacLocalFileManager 想解决的就是这些很日常、但很烦人的小问题：
 
 - 打开就是搜索，不需要先进入某个文件夹。
-- 输入后直接展开结果，不需要在多个窗口之间切换。
+- 输入后直接展开结果，不用等一个小浮窗猜你的意思。
 - 图片、文档、应用、压缩包、网页和其他文件可直接筛选。
 - 图片结果优先显示缩略图，文档结果显示路径、时间、大小和内容摘要。
 - 工程类筛选默认隐藏，普通用户界面更简洁；需要时可在设置中打开图纸 / CAD / 清单。
-- 索引保存在本机，不上传文件，也不依赖在线 AI。
+- 索引保存在本机，不上传文件，也不靠在线 AI 才能工作。
 
-## 当前亮点
+## 现在能做什么
 
-- macOS Spotlight 风格的无边框半透明窗口。
+- 类 Spotlight 的无边框半透明窗口。
 - 折叠态在屏幕上方黄金分割阅读位打开，输入后展开并居中。
-- 支持手动拖动窗口；拖动后不再自动改变用户摆放的位置。
+- 可以手动拖动窗口；拖过以后就尊重你的位置，不再自作主张。
 - 搜索本地文件名、路径、文档内容、PDF、Office 文档和图片 OCR 文本。
 - 图片结果优先以缩略图展示，其他文件以列表展示。
 - 支持分类筛选：图片、文档、应用、压缩包、网页、其他。
 - 工程类筛选（图纸 / CAD / 清单）默认隐藏，可在设置中打开。
-- 支持本地离线语义索引基础链路，不调用在线服务。
+- 有本地离线语义索引基础链路，不调用在线服务。
 - 默认跳过系统目录、应用目录、用户 Library、外接盘和开发依赖目录。
 - 不删除文件，只维护本地 SQLite 索引。
 
