@@ -1,6 +1,6 @@
 # MacLocalFileManager
 
-MacLocalFileManager 是一个 no-LLM 的 macOS 本地中文文件搜索工具。当前实现到 v8 初始可用版，重点转向 macOS Spotlight 风格的本地聚合搜索体验。
+MacLocalFileManager 是一个 no-LLM 的 macOS 本地中文文件搜索工具。当前版本为 beta1.0，重点转向 macOS Spotlight 风格的本地聚合搜索体验。
 
 对于中文文件名、Office/PDF 正文、图片 OCR、分类筛选和工程资料检索这类场景，它比 Apple Spotlight 和 Finder 搜索更直接、更好用。
 
@@ -25,13 +25,13 @@ MacLocalFileManager 是一个 no-LLM 的 macOS 本地中文文件搜索工具。
 - Word/PDF 内容命中显示片段。
 - 内容索引失败不会导致程序崩溃，会记录到 `file_contents.error`。
 - 支持图片 OCR 搜索：`png`、`jpg`、`jpeg`、`heic`。
-- OCR 使用 macOS Vision 系统能力；图片视觉语义当前使用离线确定性后端打通索引和搜索链路，真实 Core ML 图片理解模型尚未接入。
+- OCR、图片标签识别和 FeaturePrint 相似图片特征优先使用 macOS Vision 系统能力；没有 Vision/PyObjC 时会回退到离线确定性后端，保证索引链路仍可用。
 - OCR 文本写入 `file_ocr.ocr_text`。
 - 搜索结果区分 OCR 命中，OCR 命中排在文件名、路径、文档内容之后。
 - OCR 默认关闭，可在设置中打开并手动扫描；开启后才会识别图片文字。
 - 支持增量索引：文件大小和修改时间没变时，不重复提取文档内容和 OCR。
 - GUI 的“刷新文件索引”按钮只刷新文件名、路径、大小和修改时间，保证搜索主路径响应快。
-- GUI 的“索引文档内容”和“扫描 OCR”是独立慢任务，不会跟随启动自动运行。
+- GUI 的“索引文档内容”和“扫描图片识别”是独立慢任务，不会跟随启动自动运行。
 - 扫描状态会显示内容/OCR 的索引、跳过、失败数量。
 - 扫描在后台线程运行，文稿目录文件较多时窗口仍可继续响应。
 - 扫描时显示阶段进度：文件发现、写入索引、内容索引、OCR 识别。
@@ -42,7 +42,7 @@ MacLocalFileManager 是一个 no-LLM 的 macOS 本地中文文件搜索工具。
 - 支持按文件分类筛选：图片、文档、应用、网页、压缩包、其他。
 - 支持工程文件分类筛选：图纸、CAD、清单；`dwg/dxf/dwt/dgn/ifc/rvt/skp` 等 CAD 文件单独归类，`gcfx/sgcfx` 单独归入清单。工程分类默认隐藏，可在设置中打开。
 - 搜索结果按分类展示；图片结果会优先显示缩略图横排，其他文件显示列表。
-- 支持本地语义搜索开关：通过本地同义词扩展和离线确定性向量匹配文件名、路径、文档内容、PDF 内容、OCR 文本和图片视觉索引，不调用在线 AI。
+- 支持本地语义搜索开关：通过本地同义词扩展、本机 Apple Vision 和离线向量匹配文件名、路径、文档内容、PDF 内容、OCR 文本、图片标签和相似图片特征，不调用在线 AI。
 - 设置页提供离线语义索引开关、PDF/图片分项开关，以及语义索引数量和错误数量统计。
 - `zip/7z/rar/tar/gz` 等压缩包在同等级搜索结果中会优先显示。
 - 首次启动如果没有管理目录，会自动加入 Mac 全盘 `/`，但会跳过系统目录和外接磁盘。
@@ -84,7 +84,7 @@ pip install -r requirements.txt
 python app.py
 ```
 
-首次扫描 Mac 内置磁盘只建立文件名和路径索引，优先保证中文文件名搜索可用。系统目录、用户 Library、应用目录和外接磁盘默认跳过。需要搜索文档正文时，手动点击“索引文档内容”；需要识别图片文字时，勾选“启用 OCR”后点击“扫描 OCR”。扫描会在后台执行，不会阻塞窗口。第二次及以后扫描会使用增量索引，文件大小和修改时间没变时会跳过内容提取和 OCR。
+首次扫描 Mac 内置磁盘只建立文件名和路径索引，优先保证中文文件名搜索可用。系统目录、用户 Library、应用目录和外接磁盘默认跳过。需要搜索文档正文时，手动点击“索引文档内容”；需要识别图片文字、图片标签和相似图片时，勾选“启用图片识别”后点击“扫描图片识别”。扫描会在后台执行，不会阻塞窗口。第二次及以后扫描会使用增量索引，文件大小和修改时间没变时会跳过内容提取和 OCR。
 
 索引数据库保存到：
 
@@ -138,7 +138,7 @@ dist/MacLocalFileManager-English.dmg
 - `openpyxl`：Excel `.xlsx` 内容提取。
 - `pypdf`：PDF 内容提取。
 
-OCR 是可选能力。在 macOS 上要使用系统 Vision OCR，可额外安装：
+OCR、图片标签识别和 FeaturePrint 相似图片特征依赖 Apple Vision。在 macOS 上要使用系统 Vision 能力，可额外安装：
 
 ```bash
 cd MacLocalFileManager
@@ -146,16 +146,7 @@ source .venv/bin/activate
 pip install -r requirements-ocr-macos.txt
 ```
 
-如果不安装 OCR 可选依赖，普通文件名搜索和文档内容搜索仍可正常使用。扫描 OCR 时会记录 OCR 错误而不是崩溃。
-
-如果已经创建过虚拟环境：
-
-```bash
-cd MacLocalFileManager
-source .venv/bin/activate
-pip install -r requirements.txt
-python app.py
-```
+如果不安装 Apple Vision 可选依赖，普通文件名搜索、文档内容搜索和基础图片索引仍可正常使用；扫描 OCR、图片标签或 FeaturePrint 时会记录错误/回退，不会导致程序崩溃。
 
 ## 运行测试
 
@@ -173,6 +164,7 @@ cd MacLocalFileManager
 
 ## 版本边界
 
+- v2.0 规划见 [Core Spotlight Framework](docs/v2.0-core-spotlight-framework.md)：以 Swift helper 接入系统 Core Spotlight 语义搜索，SQLite 继续负责精准搜索和最终排序，并加入 System/Frosted/Liquid Glass 外观模式。
 - v4 已实现图片 OCR 搜索开关和索引流程。
 - v5 已实现增量索引、手动刷新和慢任务拆分。
 - v6 已实现分类筛选、图片缩略图结果、后台搜索和本地语义扩展搜索。
@@ -184,8 +176,9 @@ cd MacLocalFileManager
 - v7-6 已完成隔离数据目录运行验证、安装镜像卷过滤、搜索框后台回填 UI 测试，并重新生成 `.app` 和 `.dmg`。
 - v7-7 已新增图纸/CAD/清单分类，移除主界面左侧扫描范围栏，默认启动补齐全盘扫描，并调整为更扁平的浅色半透明界面。
 - v8 初始版已改为类 Spotlight 的无边框透明窗口：折叠态位于屏幕上方黄金分割阅读位，输入后展开居中；支持拖动后保持手动位置；语义搜索入口从首页移入设置；图纸/CAD/清单默认隐藏，可在设置中开启。
-- 真正的 Core ML 图片视觉模型、视频抽帧识别、音频转写索引尚未实现，后续可接入本地模型或系统框架，不接入在线 AI。
+- beta1.0 已接入 Apple Vision 图片标签和 FeaturePrint 相似图片后端；当前不内置重量级模型，不接入在线 AI。
 - 已验证打包后的 `.app` 可用隔离数据目录启动；Computer Use 当前只能读取窗口状态，无法向该 Qt 输入框写入文本，因此输入交互通过 PySide 自动化测试覆盖。
 - 文件系统事件监听尚未实现，后续可用于自动刷新索引。
 - 菜单栏常驻尚未实现，后续可作为 macOS 日常入口。
 - 全局快捷键打开搜索框尚未实现，后续可作为快速检索入口。
+- 全局无感唤起、快捷键和菜单栏入口是 beta1.0 之后的下一步重点。

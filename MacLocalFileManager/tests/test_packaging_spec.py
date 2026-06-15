@@ -15,6 +15,7 @@ class PackagingSpecTest(unittest.TestCase):
             "semantic.search",
             "semantic.vector_store",
             "semantic.backends.deterministic",
+            "semantic.backends.apple_vision",
         ]:
             self.assertIn(f'"{module}"', spec_text)
 

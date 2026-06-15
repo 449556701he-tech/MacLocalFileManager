@@ -54,11 +54,13 @@ from searcher import FileSearcher
 from semantic.config import (
     MODALITY_IMAGE,
     MODALITY_IMAGE_OCR_TEXT,
+    MODALITY_IMAGE_SIMILARITY,
     MODALITY_PDF_TEXT,
     SEMANTIC_ENABLED_SETTING,
     SEMANTIC_IMAGE_ENABLED_SETTING,
     SEMANTIC_PDF_ENABLED_SETTING,
 )
+from semantic.search import SemanticSearcher
 
 ENGINEERING_MODE_SETTING = "engineering_filters_enabled"
 ENGINEERING_FILTER_CATEGORIES = (CATEGORY_DRAWINGS, CATEGORY_CAD, CATEGORY_BILLS)
@@ -158,6 +160,7 @@ class MainWindow(QMainWindow):
         self._dragging_window = False
         self._drag_position = None
         self._user_moved_window = False
+        self._syncing_result_selection = False
         self.active_category = CATEGORY_ALL
         self.category_buttons: dict[str, QPushButton] = {}
 
@@ -381,10 +384,10 @@ class MainWindow(QMainWindow):
         self.rescan_button.clicked.connect(self.rescan_index)
         self.content_button = QPushButton(tr("索引文档内容"), parent)
         self.content_button.clicked.connect(self.rescan_content_index)
-        self.ocr_checkbox = QCheckBox(tr("启用 OCR"), parent)
-        self.ocr_checkbox.setToolTip(tr("OCR 是慢任务；开启后点击“扫描 OCR”才会识别图片文字。"))
+        self.ocr_checkbox = QCheckBox(tr("启用图片识别"), parent)
+        self.ocr_checkbox.setToolTip(tr("图片识别会执行 OCR、图片标签和相似图片索引，适合后台慢慢跑。"))
         self.ocr_checkbox.toggled.connect(self.set_ocr_enabled)
-        self.ocr_scan_button = QPushButton(tr("扫描 OCR"), parent)
+        self.ocr_scan_button = QPushButton(tr("扫描图片识别"), parent)
         self.ocr_scan_button.clicked.connect(self.rescan_ocr_index)
         for widget in (
             self.rescan_button,
@@ -431,6 +434,7 @@ class MainWindow(QMainWindow):
         self.image_list.setSpacing(12)
         self.image_list.setMaximumHeight(184)
         self.image_list.itemDoubleClicked.connect(lambda item: open_file(item.data(Qt.UserRole)))
+        self.image_list.itemSelectionChanged.connect(self._on_image_selection_changed)
         self.image_list.hide()
         layout.addWidget(self.image_list)
 
@@ -454,18 +458,26 @@ class MainWindow(QMainWindow):
         self.result_table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.result_table.setAlternatingRowColors(True)
         self.result_table.cellDoubleClicked.connect(lambda _row, _col: self.open_selected_file())
+        self.result_table.itemSelectionChanged.connect(self._on_table_selection_changed)
         layout.addWidget(self.result_table, 1)
 
         action_row = QHBoxLayout()
-        open_button = QPushButton(tr("打开文件"))
-        open_button.clicked.connect(self.open_selected_file)
-        reveal_button = QPushButton(tr("在 Finder 中显示"))
-        reveal_button.clicked.connect(self.reveal_selected_file)
-        copy_button = QPushButton(tr("复制完整路径"))
-        copy_button.clicked.connect(self.copy_selected_path)
-        action_row.addWidget(open_button)
-        action_row.addWidget(reveal_button)
-        action_row.addWidget(copy_button)
+        self.open_button = QPushButton(tr("打开文件"))
+        self.open_button.clicked.connect(self.open_selected_file)
+        self.open_button.setEnabled(False)
+        self.reveal_button = QPushButton(tr("在 Finder 中显示"))
+        self.reveal_button.clicked.connect(self.reveal_selected_file)
+        self.reveal_button.setEnabled(False)
+        self.copy_button = QPushButton(tr("复制完整路径"))
+        self.copy_button.clicked.connect(self.copy_selected_path)
+        self.copy_button.setEnabled(False)
+        self.similar_button = QPushButton(tr("查找相似图片"))
+        self.similar_button.clicked.connect(self.find_similar_selected_image)
+        self.similar_button.setEnabled(False)
+        action_row.addWidget(self.open_button)
+        action_row.addWidget(self.reveal_button)
+        action_row.addWidget(self.copy_button)
+        action_row.addWidget(self.similar_button)
         action_row.addStretch(1)
         layout.addLayout(action_row)
         return panel
@@ -492,7 +504,7 @@ class MainWindow(QMainWindow):
 
     def set_ocr_enabled(self, enabled: bool) -> None:
         self.db.set_bool_setting(OCR_ENABLED_SETTING, enabled)
-        status = "已启用 OCR，点击“扫描 OCR”后开始识别" if enabled else "已关闭 OCR"
+        status = tr("已启用图片识别，点击“扫描图片识别”后开始索引") if enabled else tr("已关闭图片识别")
         self.status_label.setText(status)
 
     def add_directory(self) -> None:
@@ -652,7 +664,12 @@ class MainWindow(QMainWindow):
         return True
 
     def prompt_for_external_volumes(self) -> None:
-        volumes = unmanaged_external_volumes(self.db.list_managed_dirs())
+        if self.is_closing or not self.isVisible():
+            return
+        try:
+            volumes = unmanaged_external_volumes(self.db.list_managed_dirs())
+        except Exception:  # noqa: BLE001 - this timer must not surface errors after shutdown.
+            return
         for volume in volumes:
             setting_key = f"external_prompted:{volume}"
             if self.db.get_bool_setting(setting_key, False):
@@ -741,6 +758,10 @@ class MainWindow(QMainWindow):
         if stats.semantic_image_indexed or stats.semantic_image_skipped or stats.semantic_image_failed:
             parts.append(
                 f"图片视觉语义 {stats.semantic_image_indexed} 个，跳过 {stats.semantic_image_skipped} 个，失败 {stats.semantic_image_failed} 个"
+            )
+        if stats.semantic_similarity_indexed or stats.semantic_similarity_skipped or stats.semantic_similarity_failed:
+            parts.append(
+                f"相似图片 {stats.semantic_similarity_indexed} 个，跳过 {stats.semantic_similarity_skipped} 个，失败 {stats.semantic_similarity_failed} 个"
             )
         if stats.skipped_dirs:
             parts.append(f"跳过目录 {stats.skipped_dirs} 个")
@@ -888,6 +909,7 @@ class MainWindow(QMainWindow):
                     self.result_table.setItem(row_index, col_index, item)
         finally:
             self.result_table.setUpdatesEnabled(True)
+        self._update_result_action_state()
 
     def _set_home_mode(self) -> None:
         self.filter_bar.hide()
@@ -942,6 +964,37 @@ class MainWindow(QMainWindow):
             return None
         return item.data(Qt.UserRole)
 
+    def _on_image_selection_changed(self) -> None:
+        if self._syncing_result_selection:
+            self._update_result_action_state()
+            return
+        if self.image_list.selectedItems():
+            self._syncing_result_selection = True
+            self.result_table.clearSelection()
+            self._syncing_result_selection = False
+        self._update_result_action_state()
+
+    def _on_table_selection_changed(self) -> None:
+        if self._syncing_result_selection:
+            self._update_result_action_state()
+            return
+        if self.result_table.selectedItems():
+            self._syncing_result_selection = True
+            self.image_list.clearSelection()
+            self._syncing_result_selection = False
+        self._update_result_action_state()
+
+    def _update_result_action_state(self) -> None:
+        if not hasattr(self, "similar_button"):
+            return
+        path = self.selected_path()
+        has_selection = bool(path)
+        self.open_button.setEnabled(has_selection)
+        self.reveal_button.setEnabled(has_selection)
+        self.copy_button.setEnabled(has_selection)
+        is_image = bool(path and Path(path).suffix.lower().lstrip(".") in {"png", "jpg", "jpeg", "heic"})
+        self.similar_button.setEnabled(is_image)
+
     def open_selected_file(self) -> None:
         path = self.selected_path()
         if path:
@@ -958,6 +1011,29 @@ class MainWindow(QMainWindow):
             QApplication.clipboard().setText(path)
             self.status_label.setText(tr("已复制完整路径"))
 
+    def find_similar_selected_image(self) -> None:
+        path = self.selected_path()
+        if not path:
+            self.status_label.setText(tr("请先选中一张图片"))
+            return
+        if Path(path).suffix.lower().lstrip(".") not in {"png", "jpg", "jpeg", "heic"}:
+            self.status_label.setText(tr("相似图片只支持图片文件"))
+            return
+        if not self.db.get_bool_setting(SEMANTIC_ENABLED_SETTING, False):
+            self.status_label.setText(tr("请先在设置中启用语义搜索并扫描图片语义"))
+            return
+        try:
+            results = SemanticSearcher(self.db).search_similar_image(path, category=CATEGORY_IMAGES)
+        except Exception as exc:  # noqa: BLE001 - UI action should report backend errors without crashing.
+            self.status_label.setText(f"{tr('查找相似图片失败')}：{exc}")
+            return
+
+        self.results = results
+        self.search_input.setText(Path(path).name)
+        self._set_search_mode()
+        self._show_search_results(results)
+        self.status_label.setText(f"{tr('相似图片')}：{len(results)} {tr('条结果')}")
+
     def _apply_macos_style(self) -> None:
         self.setStyleSheet(
             """
@@ -973,8 +1049,8 @@ class MainWindow(QMainWindow):
                 font-size: 13px;
             }
             QWidget#searchShell {
-                background: rgba(255, 255, 255, 0.58);
-                border: 1px solid rgba(255, 255, 255, 0.76);
+                background: rgba(255, 255, 255, 0.74);
+                border: 1px solid rgba(255, 255, 255, 0.88);
                 border-radius: 16px;
             }
             QLabel#heroTitle {
@@ -990,13 +1066,13 @@ class MainWindow(QMainWindow):
                 background: transparent;
             }
             QWidget#resultPanel {
-                background: rgba(255, 255, 255, 0.50);
-                border: 1px solid rgba(255, 255, 255, 0.70);
+                background: rgba(255, 255, 255, 0.72);
+                border: 1px solid rgba(255, 255, 255, 0.86);
                 border-radius: 14px;
             }
             QLineEdit#searchField {
-                background: rgba(255, 255, 255, 0.72);
-                border: 1px solid rgba(205, 213, 224, 0.72);
+                background: rgba(255, 255, 255, 0.88);
+                border: 1px solid rgba(205, 213, 224, 0.84);
                 border-radius: 14px;
                 padding: 11px 17px;
                 font-size: 22px;
@@ -1004,7 +1080,7 @@ class MainWindow(QMainWindow):
             }
             QLineEdit#searchField:focus {
                 border: 1px solid rgba(10, 132, 255, 0.42);
-                background: rgba(255, 255, 255, 0.84);
+                background: rgba(255, 255, 255, 0.94);
             }
             QPushButton#primarySearchButton {
                 background: #0a84ff;
@@ -1019,8 +1095,8 @@ class MainWindow(QMainWindow):
                 background: #0b74dc;
             }
             QPushButton#inlineSettingsButton {
-                background: rgba(255, 255, 255, 0.44);
-                border: 1px solid rgba(255, 255, 255, 0.58);
+                background: rgba(255, 255, 255, 0.68);
+                border: 1px solid rgba(255, 255, 255, 0.78);
                 border-radius: 10px;
                 color: #59616d;
                 padding: 5px 10px;
@@ -1030,8 +1106,8 @@ class MainWindow(QMainWindow):
                 background: rgba(255, 255, 255, 0.72);
             }
             QPushButton#inlineCloseButton {
-                background: rgba(255, 255, 255, 0.40);
-                border: 1px solid rgba(255, 255, 255, 0.56);
+                background: rgba(255, 255, 255, 0.66);
+                border: 1px solid rgba(255, 255, 255, 0.78);
                 border-radius: 12px;
                 color: #6b7280;
                 font-size: 16px;
@@ -1044,8 +1120,8 @@ class MainWindow(QMainWindow):
                 color: #ffffff;
             }
             QPushButton {
-                background: rgba(255, 255, 255, 0.62);
-                border: 1px solid rgba(255, 255, 255, 0.76);
+                background: rgba(255, 255, 255, 0.78);
+                border: 1px solid rgba(255, 255, 255, 0.86);
                 border-radius: 8px;
                 padding: 8px 14px;
             }
@@ -1056,12 +1132,13 @@ class MainWindow(QMainWindow):
                 background: rgba(229, 235, 244, 0.90);
             }
             QPushButton:disabled {
-                color: #8e8e93;
-                background: rgba(237, 239, 242, 0.62);
+                color: #6f7682;
+                background: rgba(237, 239, 242, 0.82);
+                border: 1px solid rgba(210, 218, 230, 0.78);
             }
             QPushButton[utilityButton="true"] {
-                background: rgba(255, 255, 255, 0.50);
-                border: 1px solid rgba(214, 222, 233, 0.72);
+                background: rgba(255, 255, 255, 0.74);
+                border: 1px solid rgba(214, 222, 233, 0.84);
                 border-radius: 8px;
                 color: #374151;
                 min-height: 28px;
@@ -1071,8 +1148,8 @@ class MainWindow(QMainWindow):
                 background: rgba(255, 255, 255, 0.78);
             }
             QPushButton[filterChip="true"] {
-                background: rgba(255, 255, 255, 0.82);
-                border: 1px solid rgba(255, 255, 255, 0.90);
+                background: rgba(255, 255, 255, 0.88);
+                border: 1px solid rgba(255, 255, 255, 0.94);
                 border-radius: 12px;
                 padding: 8px 15px;
             }
@@ -1121,13 +1198,14 @@ class MainWindow(QMainWindow):
                 color: #0a58ca;
             }
             QListWidget#imageList {
-                background: transparent;
+                background: rgba(255, 255, 255, 0.62);
                 border: 0;
+                border-radius: 10px;
                 padding: 6px;
             }
             QTableWidget {
-                background: rgba(255, 255, 255, 0.30);
-                alternate-background-color: rgba(246, 248, 251, 0.58);
+                background: rgba(255, 255, 255, 0.68);
+                alternate-background-color: rgba(246, 248, 251, 0.76);
                 border: 0;
                 border-radius: 12px;
                 gridline-color: rgba(225, 231, 240, 0.72);
@@ -1165,7 +1243,7 @@ class MainWindow(QMainWindow):
                 background: #dbeafe;
             }
             QHeaderView::section {
-                background: rgba(255, 255, 255, 0.62);
+                background: rgba(255, 255, 255, 0.82);
                 border: 0;
                 border-bottom: 1px solid rgba(210, 218, 230, 0.68);
                 padding: 8px;
@@ -1244,6 +1322,7 @@ def format_semantic_summary(summary: dict[str, dict[str, int]]) -> str:
         (MODALITY_PDF_TEXT, "PDF语义"),
         (MODALITY_IMAGE_OCR_TEXT, "图片文字语义"),
         (MODALITY_IMAGE, "图片视觉语义"),
+        (MODALITY_IMAGE_SIMILARITY, "相似图片"),
     ]
     parts = []
     for modality, label in labels:

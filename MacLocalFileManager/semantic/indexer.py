@@ -5,11 +5,13 @@ from typing import Callable
 from database import FileDatabase
 from file_categories import IMAGE_EXTENSIONS
 from semantic.backends.base import BaseEmbeddingBackend
-from semantic.backends.deterministic import DeterministicImageEmbeddingBackend, DeterministicTextEmbeddingBackend
+from semantic.backends.apple_vision import create_default_image_embedding_backend, create_default_image_similarity_backend
+from semantic.backends.deterministic import DeterministicTextEmbeddingBackend
 from semantic.chunker import chunk_text
 from semantic.config import (
     MODALITY_IMAGE,
     MODALITY_IMAGE_OCR_TEXT,
+    MODALITY_IMAGE_SIMILARITY,
     MODALITY_PDF_TEXT,
     SEMANTIC_ENABLED_SETTING,
     SEMANTIC_IMAGE_ENABLED_SETTING,
@@ -250,7 +252,7 @@ class ImageOcrSemanticIndexer:
 class ImageVisualSemanticIndexer:
     def __init__(self, db: FileDatabase, backend: BaseEmbeddingBackend | None = None) -> None:
         self.db = db
-        self.backend = backend or DeterministicImageEmbeddingBackend()
+        self.backend = backend or create_default_image_embedding_backend(db)
         self.store = SemanticVectorStore(db)
 
     def index_existing_images(
@@ -278,6 +280,7 @@ class ImageVisualSemanticIndexer:
                     skipped += 1
                     continue
                 self.store.delete_items_for_file(row["file_id"], MODALITY_IMAGE)
+                image_text = self._describe_image(row["path"], row["filename"])
                 self.store.index_image_item(
                     self.backend,
                     SemanticItem(
@@ -285,8 +288,8 @@ class ImageVisualSemanticIndexer:
                         file_id=row["file_id"],
                         modality=MODALITY_IMAGE,
                         item_key="image:0",
-                        text=row["filename"],
-                        metadata="Image visual semantic",
+                        text=image_text,
+                        metadata=f"Image visual semantic · {self.backend.model_key}",
                         source_size=row["size"],
                         source_modified_at=row["modified_at"],
                     ),
@@ -305,6 +308,14 @@ class ImageVisualSemanticIndexer:
 
         self._progress(progress_callback, f"图片视觉语义索引完成：索引 {indexed} 个，跳过 {skipped} 个，失败 {failed} 个")
         return indexed, failed, skipped
+
+    def _describe_image(self, path: str, fallback: str) -> str:
+        describe = getattr(self.backend, "describe_image", None)
+        if callable(describe):
+            description = str(describe(path)).strip()
+            if description:
+                return description
+        return fallback
 
     def _fetch_image_rows(self):
         extensions = sorted(IMAGE_EXTENSIONS)
@@ -346,6 +357,126 @@ class ImageVisualSemanticIndexer:
                 item_key="image:error",
                 text="",
                 metadata="Image visual semantic indexing failed",
+                source_size=row["size"],
+                source_modified_at=row["modified_at"],
+            )
+        )
+        model_id = self.store.ensure_model(self.backend)
+        self.store.upsert_embedding(item_id, model_id, [0.0 for _ in range(self.backend.dimensions)], error=error)
+
+    def _max_file_size_bytes(self) -> int:
+        raw_value = self.db.get_setting(SEMANTIC_MAX_FILE_SIZE_MB_SETTING, "100")
+        try:
+            value = max(1, int(raw_value))
+        except ValueError:
+            value = 100
+        return value * 1024 * 1024
+
+    @staticmethod
+    def _progress(progress_callback: Callable[[str], None] | None, message: str) -> None:
+        if progress_callback is not None:
+            progress_callback(message)
+
+
+class ImageSimilarityIndexer:
+    def __init__(self, db: FileDatabase, backend: BaseEmbeddingBackend | None = None) -> None:
+        self.db = db
+        self.backend = backend or create_default_image_similarity_backend()
+        self.store = SemanticVectorStore(db)
+
+    def index_existing_images(
+        self,
+        progress_callback: Callable[[str], None] | None = None,
+    ) -> tuple[int, int, int]:
+        if not self.db.get_bool_setting(SEMANTIC_ENABLED_SETTING, False):
+            self._progress(progress_callback, "相似图片索引未启用")
+            return 0, 0, 0
+        if not self.db.get_bool_setting(SEMANTIC_IMAGE_ENABLED_SETTING, True):
+            self._progress(progress_callback, "相似图片索引已关闭")
+            return 0, 0, 0
+
+        rows = self._fetch_image_rows()
+        total = len(rows)
+        indexed = 0
+        failed = 0
+        skipped = 0
+        max_file_size = self._max_file_size_bytes()
+        self._progress(progress_callback, f"相似图片索引：处理 0/{total} 个，索引 0 个，跳过 0 个，失败 0 个")
+
+        for seen, row in enumerate(rows, start=1):
+            try:
+                if row["size"] > max_file_size or self._is_unchanged(row):
+                    skipped += 1
+                    continue
+                self.store.delete_items_for_file(row["file_id"], MODALITY_IMAGE_SIMILARITY)
+                self.store.index_image_item(
+                    self.backend,
+                    SemanticItem(
+                        id=None,
+                        file_id=row["file_id"],
+                        modality=MODALITY_IMAGE_SIMILARITY,
+                        item_key="featureprint:0",
+                        text=row["filename"],
+                        metadata=f"Image similarity · {self.backend.model_key}",
+                        source_size=row["size"],
+                        source_modified_at=row["modified_at"],
+                    ),
+                    row["path"],
+                )
+                indexed += 1
+            except Exception as exc:  # noqa: BLE001 - one broken image must not stop the scan.
+                failed += 1
+                self._record_failed_item(row, str(exc))
+
+            if seen % 10 == 0 or seen == total:
+                self._progress(
+                    progress_callback,
+                    f"相似图片索引：处理 {seen}/{total} 个，索引 {indexed} 个，跳过 {skipped} 个，失败 {failed} 个",
+                )
+
+        self._progress(progress_callback, f"相似图片索引完成：索引 {indexed} 个，跳过 {skipped} 个，失败 {failed} 个")
+        return indexed, failed, skipped
+
+    def _fetch_image_rows(self):
+        extensions = sorted(IMAGE_EXTENSIONS)
+        placeholders = ", ".join("?" for _ in extensions)
+        with self.db.connect() as conn:
+            return conn.execute(
+                f"""
+                SELECT id AS file_id, filename, path, extension, size, modified_at
+                FROM files
+                WHERE "exists" = 1
+                  AND extension IN ({placeholders})
+                ORDER BY path
+                """,
+                extensions,
+            ).fetchall()
+
+    def _is_unchanged(self, row) -> bool:
+        with self.db.connect() as conn:
+            existing = conn.execute(
+                """
+                SELECT 1
+                FROM semantic_items
+                WHERE file_id = ?
+                  AND modality = ?
+                  AND source_size = ?
+                  AND source_modified_at = ?
+                LIMIT 1
+                """,
+                (row["file_id"], MODALITY_IMAGE_SIMILARITY, row["size"], row["modified_at"]),
+            ).fetchone()
+        return existing is not None
+
+    def _record_failed_item(self, row, error: str) -> None:
+        item_id = self.store.upsert_item(
+            SemanticItem(
+                id=None,
+                file_id=row["file_id"],
+                modality=MODALITY_IMAGE_SIMILARITY,
+                item_key="featureprint:error",
+                text=row["filename"],
+                metadata="Image similarity indexing failed",
                 source_size=row["size"],
                 source_modified_at=row["modified_at"],
             )

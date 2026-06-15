@@ -7,12 +7,15 @@ SEMANTIC_MAX_FILE_SIZE_MB_SETTING = "semantic_max_file_size_mb"
 
 DEFAULT_TEXT_MODEL_KEY = "deterministic-text-v1"
 DEFAULT_IMAGE_MODEL_KEY = "deterministic-image-v1"
+DEFAULT_IMAGE_SIMILARITY_MODEL_KEY = "deterministic-image-similarity-v1"
 DEFAULT_DIMENSIONS = 16
+APPLE_VISION_FEATUREPRINT_DIMENSIONS = 768
 
 MODALITY_TEXT = "text"
 MODALITY_PDF_TEXT = "pdf_text"
 MODALITY_IMAGE_OCR_TEXT = "image_ocr_text"
 MODALITY_IMAGE = "image"
+MODALITY_IMAGE_SIMILARITY = "image_similarity"
 
 JOB_TYPE_PDF = "pdf_semantic"
 JOB_TYPE_IMAGE_OCR = "image_ocr_semantic"

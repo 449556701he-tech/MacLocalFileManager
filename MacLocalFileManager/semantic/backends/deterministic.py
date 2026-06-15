@@ -5,7 +5,15 @@ import math
 from pathlib import Path
 
 from semantic.backends.base import BaseEmbeddingBackend
-from semantic.config import DEFAULT_DIMENSIONS, DEFAULT_IMAGE_MODEL_KEY, DEFAULT_TEXT_MODEL_KEY, MODALITY_IMAGE, MODALITY_TEXT
+from semantic.config import (
+    DEFAULT_DIMENSIONS,
+    DEFAULT_IMAGE_MODEL_KEY,
+    DEFAULT_IMAGE_SIMILARITY_MODEL_KEY,
+    DEFAULT_TEXT_MODEL_KEY,
+    MODALITY_IMAGE,
+    MODALITY_IMAGE_SIMILARITY,
+    MODALITY_TEXT,
+)
 
 
 class DeterministicTextEmbeddingBackend(BaseEmbeddingBackend):
@@ -39,6 +47,11 @@ class DeterministicImageEmbeddingBackend(BaseEmbeddingBackend):
             descriptor_parts.append(decoded_sample)
         descriptor_parts.append(hashlib.sha256(sample).hexdigest())
         return stable_text_embedding(" ".join(descriptor_parts), self.dimensions)
+
+
+class DeterministicImageSimilarityBackend(DeterministicImageEmbeddingBackend):
+    model_key = DEFAULT_IMAGE_SIMILARITY_MODEL_KEY
+    modality = MODALITY_IMAGE_SIMILARITY
 
 
 def stable_text_embedding(text: str, dimensions: int) -> list[float]:

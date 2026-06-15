@@ -28,6 +28,7 @@ a = Analysis(
         "objc",
         "semantic",
         "semantic.backends",
+        "semantic.backends.apple_vision",
         "semantic.backends.base",
         "semantic.backends.deterministic",
         "semantic.chunker",
@@ -85,7 +86,7 @@ app = BUNDLE(
         "CFBundleName": "MacLocalFileManager-English",
         "CFBundleDisplayName": "MacLocalFileManager English",
         "CFBundleShortVersionString": "1.0.0",
-        "CFBundleVersion": "1.0.0",
+        "CFBundleVersion": "1.0.0-beta1",
         "NSHighResolutionCapable": True,
     },
 )

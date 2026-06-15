@@ -18,7 +18,8 @@ from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QPointF, QRect, Qt, QThread, QEvent
 
 from database import FileDatabase
-from models import FileRecord
+from models import FileRecord, SearchResult
+from file_categories import CATEGORY_DOCUMENTS, CATEGORY_IMAGES
 from ui.main_window import ENGINEERING_MODE_SETTING, MainWindow
 
 
@@ -114,6 +115,7 @@ labels = [button.text() for button in window.category_buttons.values()]
 print(window.hero_title.text())
 print(window.search_input.placeholderText())
 print(window.settings_button.text())
+print(window.similar_button.text())
 print('|'.join(labels))
 window.close()
 tmp.cleanup()
@@ -130,6 +132,7 @@ tmp.cleanup()
         self.assertIn("Local Search", result.stdout)
         self.assertIn("Search local files, images, documents, clipboard", result.stdout)
         self.assertIn("Settings", result.stdout)
+        self.assertIn("Find Similar Images", result.stdout)
         self.assertIn("All|Images|Documents|Apps|Archives|Web|Other", result.stdout)
 
     def test_window_uses_frameless_spotlight_chrome(self) -> None:
@@ -208,12 +211,64 @@ tmp.cleanup()
         self.assertIn("QScrollBar:vertical", style)
         self.assertIn("QScrollBar::handle:vertical", style)
 
+    def test_result_actions_include_find_similar_images_button(self) -> None:
+        self.assertEqual(self.window.open_button.text(), "打开文件")
+        self.assertEqual(self.window.reveal_button.text(), "在 Finder 中显示")
+        self.assertEqual(self.window.copy_button.text(), "复制完整路径")
+        self.assertEqual(self.window.similar_button.text(), "查找相似图片")
+        self.assertTrue(hasattr(self.window, "find_similar_selected_image"))
+
+    def test_image_recognition_scan_button_describes_all_image_tasks(self) -> None:
+        self.assertEqual(self.window.ocr_checkbox.text(), "启用图片识别")
+        self.assertEqual(self.window.ocr_scan_button.text(), "扫描图片识别")
+        self.assertIn("OCR", self.window.ocr_checkbox.toolTip())
+        self.assertIn("图片标签", self.window.ocr_checkbox.toolTip())
+        self.assertIn("相似图片", self.window.ocr_checkbox.toolTip())
+
+    def test_find_similar_button_is_enabled_only_for_selected_images(self) -> None:
+        image_result = self._result_for("付款截图.jpg", CATEGORY_IMAGES, "jpg")
+        doc_result = self._result_for("合同.docx", CATEGORY_DOCUMENTS, "docx")
+
+        self.window._show_search_results([image_result, doc_result])
+        self.app.processEvents()
+
+        self.assertFalse(self.window.open_button.isEnabled())
+        self.assertFalse(self.window.reveal_button.isEnabled())
+        self.assertFalse(self.window.copy_button.isEnabled())
+        self.assertFalse(self.window.similar_button.isEnabled())
+
+        self.window.image_list.setCurrentRow(0)
+        self.app.processEvents()
+        self.assertTrue(self.window.open_button.isEnabled())
+        self.assertTrue(self.window.reveal_button.isEnabled())
+        self.assertTrue(self.window.copy_button.isEnabled())
+        self.assertTrue(self.window.similar_button.isEnabled())
+
+        self.window.result_table.selectRow(0)
+        self.app.processEvents()
+        self.assertTrue(self.window.open_button.isEnabled())
+        self.assertTrue(self.window.reveal_button.isEnabled())
+        self.assertTrue(self.window.copy_button.isEnabled())
+        self.assertFalse(self.window.similar_button.isEnabled())
+        self.assertEqual(self.window.selected_path(), doc_result.path)
+
     def test_filter_chips_are_opaque_enough_to_read(self) -> None:
         style = self.window.styleSheet()
 
-        self.assertIn("QPushButton[filterChip=\"true\"] {\n                background: rgba(255, 255, 255, 0.82);", style)
-        self.assertIn("border: 1px solid rgba(255, 255, 255, 0.90);", style)
+        self.assertIn("QPushButton[filterChip=\"true\"] {\n                background: rgba(255, 255, 255, 0.88);", style)
+        self.assertIn("border: 1px solid rgba(255, 255, 255, 0.94);", style)
         self.assertIn("QPushButton[filterChip=\"true\"]:checked {\n                background: rgba(10, 132, 255, 0.32);", style)
+
+    def test_glass_surfaces_are_opaque_enough_over_busy_backgrounds(self) -> None:
+        style = self.window.styleSheet()
+
+        self.assertIn("QWidget#searchShell {\n                background: rgba(255, 255, 255, 0.74);", style)
+        self.assertIn("QWidget#resultPanel {\n                background: rgba(255, 255, 255, 0.72);", style)
+        self.assertIn("QLineEdit#searchField {\n                background: rgba(255, 255, 255, 0.88);", style)
+        self.assertIn("QListWidget#imageList {\n                background: rgba(255, 255, 255, 0.62);", style)
+        self.assertIn("QTableWidget {\n                background: rgba(255, 255, 255, 0.68);", style)
+        self.assertIn("QPushButton:disabled {\n                color: #6f7682;", style)
+        self.assertIn("border: 1px solid rgba(210, 218, 230, 0.78);", style)
 
     def test_frameless_window_does_not_paint_rectangular_outer_frame(self) -> None:
         margins = self.window.centralWidget().layout().contentsMargins()
@@ -300,10 +355,37 @@ tmp.cleanup()
             thread.wait(1000)
             self.window.search_thread = None
 
+    def test_external_volume_prompt_is_skipped_while_window_is_closing(self) -> None:
+        self.window.is_closing = True
+        self.window.db.db_path = self.root / "missing" / "test.sqlite3"
+
+        self.window.prompt_for_external_volumes()
+
     def _add_indexed_file(self, name: str) -> None:
         path = self.root / name
         path.write_text("fixture", encoding="utf-8")
         self.db.upsert_file(FileRecord.from_path(path, time.time()))
+
+    def _result_for(self, name: str, category: str, extension: str) -> SearchResult:
+        path = self.root / name
+        path.write_text("fixture", encoding="utf-8")
+        now = time.time()
+        return SearchResult(
+            id=1,
+            filename=name,
+            path=str(path),
+            parent_dir=str(self.root),
+            extension=extension,
+            size=path.stat().st_size,
+            created_at=now,
+            modified_at=now,
+            indexed_at=now,
+            exists=1,
+            reason="fixture",
+            rank=1,
+            match_type="文件名命中",
+            category=category,
+        )
 
     def _wait_for_search_results(self) -> None:
         deadline = time.time() + 1.0

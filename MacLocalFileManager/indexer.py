@@ -8,7 +8,7 @@ from content_indexer import ContentIndexer
 from database import FileDatabase
 from models import ScanStats
 from ocr_indexer import OCR_ENABLED_SETTING, OcrIndexer
-from semantic.indexer import ImageOcrSemanticIndexer, ImageVisualSemanticIndexer, PdfSemanticIndexer
+from semantic.indexer import ImageOcrSemanticIndexer, ImageSimilarityIndexer, ImageVisualSemanticIndexer, PdfSemanticIndexer
 from scanner import DirectoryScanner, is_protected_path
 
 
@@ -21,6 +21,7 @@ class FileIndexer:
         self.pdf_semantic_indexer = PdfSemanticIndexer(db)
         self.image_ocr_semantic_indexer = ImageOcrSemanticIndexer(db)
         self.image_visual_semantic_indexer = ImageVisualSemanticIndexer(db)
+        self.image_similarity_indexer = ImageSimilarityIndexer(db)
 
     def add_directory(self, path: str | Path) -> None:
         resolved = Path(path).expanduser().resolve()
@@ -46,6 +47,7 @@ class FileIndexer:
         semantic_pdf_indexed = semantic_pdf_failed = semantic_pdf_skipped = 0
         semantic_ocr_indexed = semantic_ocr_failed = semantic_ocr_skipped = 0
         semantic_image_indexed = semantic_image_failed = semantic_image_skipped = 0
+        semantic_similarity_indexed = semantic_similarity_failed = semantic_similarity_skipped = 0
 
         if include_content:
             content_indexed, content_failed, content_skipped = self.content_indexer.index_existing_files(
@@ -75,6 +77,11 @@ class FileIndexer:
                 semantic_image_failed,
                 semantic_image_skipped,
             ) = self.image_visual_semantic_indexer.index_existing_images(progress_callback=progress_callback)
+            (
+                semantic_similarity_indexed,
+                semantic_similarity_failed,
+                semantic_similarity_skipped,
+            ) = self.image_similarity_indexer.index_existing_images(progress_callback=progress_callback)
         else:
             self._progress(progress_callback, "OCR 未运行")
 
@@ -99,6 +106,9 @@ class FileIndexer:
             semantic_image_indexed=semantic_image_indexed,
             semantic_image_failed=semantic_image_failed,
             semantic_image_skipped=semantic_image_skipped,
+            semantic_similarity_indexed=semantic_similarity_indexed,
+            semantic_similarity_failed=semantic_similarity_failed,
+            semantic_similarity_skipped=semantic_similarity_skipped,
         )
 
     @staticmethod

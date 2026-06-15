@@ -79,6 +79,9 @@ class ScanStats:
     semantic_image_indexed: int = 0
     semantic_image_failed: int = 0
     semantic_image_skipped: int = 0
+    semantic_similarity_indexed: int = 0
+    semantic_similarity_failed: int = 0
+    semantic_similarity_skipped: int = 0
 
 
 @dataclass(frozen=True)
