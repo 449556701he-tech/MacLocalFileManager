@@ -48,6 +48,7 @@ from file_categories import (
     category_label,
 )
 from indexer import FileIndexer
+from i18n import tr
 from ocr_indexer import OCR_ENABLED_SETTING
 from searcher import FileSearcher
 from semantic.config import (
@@ -190,19 +191,19 @@ class MainWindow(QMainWindow):
 
         title_row = QHBoxLayout()
         title_row.setSpacing(10)
-        self.hero_title = QLabel("本地聚合搜索")
+        self.hero_title = QLabel(tr("本地聚合搜索"))
         self.hero_title.setObjectName("heroTitle")
         self.hero_title.installEventFilter(self)
-        self.quick_entry_label = QLabel("本机文件 · 图片 · 文档 · 剪切板")
+        self.quick_entry_label = QLabel(tr("本机文件 · 图片 · 文档 · 剪切板"))
         self.quick_entry_label.setObjectName("quickEntryHint")
         self.quick_entry_label.installEventFilter(self)
-        self.settings_button = QPushButton("设置")
+        self.settings_button = QPushButton(tr("设置"))
         self.settings_button.setObjectName("inlineSettingsButton")
-        self.settings_button.setToolTip("扫描、索引和工程分类设置")
+        self.settings_button.setToolTip(tr("扫描、索引和工程分类设置"))
         self.settings_button.clicked.connect(self.open_settings_dialog)
         self.close_button = QPushButton("×")
         self.close_button.setObjectName("inlineCloseButton")
-        self.close_button.setToolTip("关闭")
+        self.close_button.setToolTip(tr("关闭"))
         self.close_button.setFixedSize(24, 24)
         self.close_button.clicked.connect(self.close)
         title_row.addWidget(self.hero_title)
@@ -216,11 +217,11 @@ class MainWindow(QMainWindow):
         search_row.setSpacing(8)
         self.search_input = QLineEdit()
         self.search_input.setObjectName("searchField")
-        self.search_input.setPlaceholderText("搜索本机文件、图片、文档、剪切板")
+        self.search_input.setPlaceholderText(tr("搜索本机文件、图片、文档、剪切板"))
         self.search_input.setMinimumHeight(54)
         self.search_input.textChanged.connect(lambda: self.search_timer.start(260))
         self.search_input.returnPressed.connect(self.run_search)
-        self.search_button = QPushButton("搜索")
+        self.search_button = QPushButton(tr("搜索"))
         self.search_button.setObjectName("primarySearchButton")
         self.search_button.setMinimumHeight(46)
         self.search_button.clicked.connect(self.run_search)
@@ -237,7 +238,7 @@ class MainWindow(QMainWindow):
         self.result_panel = self._build_result_panel()
         root_layout.addWidget(self.result_panel, 1)
 
-        self.status_label = QLabel("就绪")
+        self.status_label = QLabel(tr("就绪"))
         self.status_label.setObjectName("statusLine")
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 0)
@@ -254,11 +255,11 @@ class MainWindow(QMainWindow):
         self._build_menu()
 
     def _build_menu(self) -> None:
-        file_menu = self.menuBar().addMenu("文件")
-        settings_action = QAction("扫描设置", self)
+        file_menu = self.menuBar().addMenu(tr("文件"))
+        settings_action = QAction(tr("扫描设置"), self)
         settings_action.triggered.connect(self.open_settings_dialog)
         file_menu.addAction(settings_action)
-        rescan_action = QAction("刷新文件索引", self)
+        rescan_action = QAction(tr("刷新文件索引"), self)
         rescan_action.triggered.connect(self.rescan_index)
         file_menu.addAction(rescan_action)
         self.menuBar().hide()
@@ -319,7 +320,7 @@ class MainWindow(QMainWindow):
         if self.search_thread is not None and self.search_thread.isRunning():
             self.close_after_search = True
             self.status_label.show()
-            self.status_label.setText("正在完成当前搜索，完成后关闭")
+            self.status_label.setText(tr("正在完成当前搜索，完成后关闭"))
             event.ignore()
             return
         self._stop_background_threads()
@@ -348,7 +349,7 @@ class MainWindow(QMainWindow):
         row = QHBoxLayout(bar)
         row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(8)
-        self.semantic_button = QPushButton("语义搜索", bar)
+        self.semantic_button = QPushButton(tr("语义搜索"), bar)
         self.semantic_button.setCheckable(True)
         self.semantic_button.hide()
         for category in (*DEFAULT_FILTER_CATEGORIES, *ENGINEERING_FILTER_CATEGORIES):
@@ -376,14 +377,14 @@ class MainWindow(QMainWindow):
             self.set_category_filter(CATEGORY_ALL)
 
     def _build_hidden_maintenance_controls(self, parent: QWidget) -> None:
-        self.rescan_button = QPushButton("刷新文件索引", parent)
+        self.rescan_button = QPushButton(tr("刷新文件索引"), parent)
         self.rescan_button.clicked.connect(self.rescan_index)
-        self.content_button = QPushButton("索引文档内容", parent)
+        self.content_button = QPushButton(tr("索引文档内容"), parent)
         self.content_button.clicked.connect(self.rescan_content_index)
-        self.ocr_checkbox = QCheckBox("启用 OCR", parent)
-        self.ocr_checkbox.setToolTip("OCR 是慢任务；开启后点击“扫描 OCR”才会识别图片文字。")
+        self.ocr_checkbox = QCheckBox(tr("启用 OCR"), parent)
+        self.ocr_checkbox.setToolTip(tr("OCR 是慢任务；开启后点击“扫描 OCR”才会识别图片文字。"))
         self.ocr_checkbox.toggled.connect(self.set_ocr_enabled)
-        self.ocr_scan_button = QPushButton("扫描 OCR", parent)
+        self.ocr_scan_button = QPushButton(tr("扫描 OCR"), parent)
         self.ocr_scan_button.clicked.connect(self.rescan_ocr_index)
         for widget in (
             self.rescan_button,
@@ -396,7 +397,7 @@ class MainWindow(QMainWindow):
     def _build_directory_panel(self) -> QWidget:
         panel = QWidget()
         layout = QVBoxLayout(panel)
-        title = QLabel("扫描范围")
+        title = QLabel(tr("扫描范围"))
         title.setProperty("sidebarTitle", True)
         layout.addWidget(title)
 
@@ -404,7 +405,7 @@ class MainWindow(QMainWindow):
         self.dir_list.setObjectName("sidebarList")
         layout.addWidget(self.dir_list, 1)
 
-        settings_button = QPushButton("设置")
+        settings_button = QPushButton(tr("设置"))
         settings_button.clicked.connect(self.open_settings_dialog)
         layout.addWidget(settings_button)
         return panel
@@ -416,7 +417,7 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(8)
 
-        self.image_section_label = QLabel("图片")
+        self.image_section_label = QLabel(tr("图片"))
         self.image_section_label.setProperty("sectionLabel", True)
         self.image_section_label.hide()
         layout.addWidget(self.image_section_label)
@@ -440,7 +441,7 @@ class MainWindow(QMainWindow):
 
         self.result_table = QTableWidget(0, 7)
         self.result_table.setHorizontalHeaderLabels(
-            ["名称", "类型", "路径", "修改日期", "大小", "命中", "内容摘要"]
+            [tr("名称"), tr("类型"), tr("路径"), tr("修改日期"), tr("大小"), tr("命中"), tr("内容摘要")]
         )
         self.result_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.result_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
@@ -456,11 +457,11 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.result_table, 1)
 
         action_row = QHBoxLayout()
-        open_button = QPushButton("打开文件")
+        open_button = QPushButton(tr("打开文件"))
         open_button.clicked.connect(self.open_selected_file)
-        reveal_button = QPushButton("在 Finder 中显示")
+        reveal_button = QPushButton(tr("在 Finder 中显示"))
         reveal_button.clicked.connect(self.reveal_selected_file)
-        copy_button = QPushButton("复制完整路径")
+        copy_button = QPushButton(tr("复制完整路径"))
         copy_button.clicked.connect(self.copy_selected_path)
         action_row.addWidget(open_button)
         action_row.addWidget(reveal_button)
@@ -517,14 +518,14 @@ class MainWindow(QMainWindow):
 
     def open_settings_dialog(self) -> None:
         dialog = QDialog(self)
-        dialog.setWindowTitle("扫描设置")
+        dialog.setWindowTitle(tr("扫描设置"))
         dialog.setMinimumWidth(560)
         layout = QVBoxLayout(dialog)
 
-        title = QLabel("默认全盘扫描")
+        title = QLabel(tr("默认全盘扫描"))
         title.setProperty("sidebarTitle", True)
         layout.addWidget(title)
-        scan_hint = QLabel("默认扫描 Macintosh HD 的用户文件，自动跳过系统、应用、缓存、安装镜像和开发依赖目录。U 盘和外接硬盘可在这里确认加入。")
+        scan_hint = QLabel(tr("默认扫描 Macintosh HD 的用户文件，自动跳过系统、应用、缓存、安装镜像和开发依赖目录。U 盘和外接硬盘可在这里确认加入。"))
         scan_hint.setWordWrap(True)
         layout.addWidget(scan_hint)
 
@@ -545,7 +546,7 @@ class MainWindow(QMainWindow):
             if item is None:
                 return
             if item.data(Qt.UserRole) == "/":
-                QMessageBox.information(dialog, "默认扫描", "默认全盘扫描不能移除。")
+                QMessageBox.information(dialog, tr("默认扫描"), tr("默认全盘扫描不能移除。"))
                 return
             self.indexer.remove_directory(item.data(Qt.UserRole))
             refresh_list()
@@ -554,13 +555,13 @@ class MainWindow(QMainWindow):
         def add_external_volume() -> None:
             volumes = unmanaged_external_volumes(self.db.list_managed_dirs())
             if not volumes:
-                QMessageBox.information(dialog, "外接磁盘", "没有发现未加入扫描的外接磁盘。")
+                QMessageBox.information(dialog, tr("外接磁盘"), tr("没有发现未加入扫描的外接磁盘。"))
                 return
             for volume in volumes:
                 answer = QMessageBox.question(
                     dialog,
-                    "发现外接磁盘",
-                    f"是否将“{volume.name}”加入扫描？\n{volume}",
+                    tr("发现外接磁盘"),
+                    f"{tr('是否将外接磁盘加入扫描？')} {volume.name}\n{volume}",
                     QMessageBox.Yes | QMessageBox.No,
                     QMessageBox.No,
                 )
@@ -569,11 +570,11 @@ class MainWindow(QMainWindow):
             refresh_list()
 
         button_row = QHBoxLayout()
-        add_external_button = QPushButton("加入外接磁盘")
+        add_external_button = QPushButton(tr("加入外接磁盘"))
         add_external_button.clicked.connect(add_external_volume)
-        remove_button = QPushButton("移除选中外接磁盘")
+        remove_button = QPushButton(tr("移除选中外接磁盘"))
         remove_button.clicked.connect(remove_selected)
-        close_button = QPushButton("完成")
+        close_button = QPushButton(tr("完成"))
         close_button.clicked.connect(dialog.accept)
         button_row.addWidget(add_external_button)
         button_row.addWidget(remove_button)
@@ -581,15 +582,15 @@ class MainWindow(QMainWindow):
         button_row.addWidget(close_button)
         layout.addLayout(button_row)
 
-        semantic_title = QLabel("离线语义索引")
+        semantic_title = QLabel(tr("离线语义索引"))
         semantic_title.setProperty("sidebarTitle", True)
         layout.addWidget(semantic_title)
 
-        semantic_enabled_checkbox = QCheckBox("启用语义搜索")
+        semantic_enabled_checkbox = QCheckBox(tr("启用语义搜索"))
         semantic_enabled_checkbox.setChecked(self.db.get_bool_setting(SEMANTIC_ENABLED_SETTING, False))
-        semantic_pdf_checkbox = QCheckBox("PDF 语义")
+        semantic_pdf_checkbox = QCheckBox(tr("PDF 语义"))
         semantic_pdf_checkbox.setChecked(self.db.get_bool_setting(SEMANTIC_PDF_ENABLED_SETTING, True))
-        semantic_image_checkbox = QCheckBox("图片语义")
+        semantic_image_checkbox = QCheckBox(tr("图片语义"))
         semantic_image_checkbox.setChecked(self.db.get_bool_setting(SEMANTIC_IMAGE_ENABLED_SETTING, True))
         semantic_summary_label = QLabel()
         semantic_summary_label.setWordWrap(True)
@@ -622,10 +623,10 @@ class MainWindow(QMainWindow):
         layout.addLayout(semantic_row)
         layout.addWidget(semantic_summary_label)
 
-        display_title = QLabel("显示选项")
+        display_title = QLabel(tr("显示选项"))
         display_title.setProperty("sidebarTitle", True)
         layout.addWidget(display_title)
-        engineering_checkbox = QCheckBox("工程模式：显示图纸 / CAD / 清单分类")
+        engineering_checkbox = QCheckBox(tr("工程模式：显示图纸 / CAD / 清单分类"))
         engineering_checkbox.setChecked(self.db.get_bool_setting(ENGINEERING_MODE_SETTING, False))
 
         def set_engineering_mode_enabled(value: bool) -> None:
@@ -645,7 +646,7 @@ class MainWindow(QMainWindow):
         try:
             self.indexer.add_directory(path)
         except ValueError as exc:
-            QMessageBox.warning(self, "无法添加扫描位置", str(exc))
+            QMessageBox.warning(self, tr("无法添加扫描位置"), str(exc))
             return False
         self._load_directories()
         return True
@@ -659,8 +660,8 @@ class MainWindow(QMainWindow):
             self.db.set_bool_setting(setting_key, True)
             answer = QMessageBox.question(
                 self,
-                "发现外接磁盘",
-                f"是否将“{volume.name}”加入扫描？\n{volume}",
+                tr("发现外接磁盘"),
+                f"{tr('是否将外接磁盘加入扫描？')} {volume.name}\n{volume}",
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.No,
             )
@@ -691,14 +692,14 @@ class MainWindow(QMainWindow):
 
     def _start_scan(self, mode: str, include_content: bool, include_ocr: bool) -> None:
         if self.scan_thread is not None and self.scan_thread.isRunning():
-            self.status_label.setText("正在后台扫描，请稍候")
+            self.status_label.setText(tr("正在后台扫描，请稍候"))
             return
 
         self.rescan_button.setEnabled(False)
         self.content_button.setEnabled(False)
         self.ocr_scan_button.setEnabled(False)
         self.scan_mode = mode
-        self.status_label.setText(f"正在后台运行{mode}，窗口可以继续操作")
+        self.status_label.setText(f"{tr('正在后台运行')}{mode}，{tr('窗口可以继续操作')}")
         self.scan_thread = QThread(self)
         self.scan_worker = ScanWorker(self.db.db_path, include_content=include_content, include_ocr=include_ocr)
         self.scan_worker.moveToThread(self.scan_thread)
@@ -775,7 +776,7 @@ class MainWindow(QMainWindow):
         if self.search_thread is not None and self.search_thread.isRunning():
             self.pending_search = (query, update_status)
             if update_status:
-                self.status_label.setText("正在搜索，继续输入不会卡住")
+                self.status_label.setText(tr("正在搜索，继续输入不会卡住"))
             return
 
         self._start_search(query, update_status)
@@ -786,7 +787,7 @@ class MainWindow(QMainWindow):
         self.search_id += 1
         current_id = self.search_id
         if update_status:
-            self.status_label.setText("正在搜索，窗口可以继续操作")
+            self.status_label.setText(tr("正在搜索，窗口可以继续操作"))
 
         self.search_thread = QThread(self)
         self.search_worker = SearchWorker(
@@ -856,14 +857,14 @@ class MainWindow(QMainWindow):
             self.image_list.addItem(item)
 
         if image_results:
-            self.image_section_label.setText(f"智能识别到 {len(image_results)} 张图片")
+            self.image_section_label.setText(f"{tr('智能识别到')} {len(image_results)} {tr('张图片')}")
             self.image_section_label.show()
             self.image_list.show()
         else:
             self.image_section_label.hide()
             self.image_list.hide()
 
-        self.list_section_label.setText(f"搜索到 {len(table_results)} 个文件")
+        self.list_section_label.setText(f"{tr('搜索到')} {len(table_results)} {tr('个文件')}")
         self.list_section_label.setVisible(bool(table_results))
 
         self.result_table.setUpdatesEnabled(False)
@@ -955,7 +956,7 @@ class MainWindow(QMainWindow):
         path = self.selected_path()
         if path:
             QApplication.clipboard().setText(path)
-            self.status_label.setText("已复制完整路径")
+            self.status_label.setText(tr("已复制完整路径"))
 
     def _apply_macos_style(self) -> None:
         self.setStyleSheet(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import subprocess
 import sys
 import tempfile
 import time
@@ -92,6 +93,44 @@ class MainWindowRuntimeTest(unittest.TestCase):
         self.assertFalse(self.window.filter_bar.isVisible())
         self.assertFalse(self.window.result_panel.isVisible())
         self.assertFalse(self.window.semantic_button.isVisible())
+
+    def test_english_launch_entry_uses_english_visible_labels(self) -> None:
+        code = """
+import os
+import sys
+import tempfile
+from pathlib import Path
+os.environ['QT_QPA_PLATFORM'] = 'offscreen'
+os.environ['MACLOCALFILEMANAGER_LANG'] = 'en'
+sys.path.insert(0, str(Path.cwd()))
+from PySide6.QtWidgets import QApplication
+from database import FileDatabase
+from ui.main_window import MainWindow
+app = QApplication([])
+tmp = tempfile.TemporaryDirectory()
+window = MainWindow(FileDatabase(Path(tmp.name) / 'test.sqlite3'))
+app.processEvents()
+labels = [button.text() for button in window.category_buttons.values()]
+print(window.hero_title.text())
+print(window.search_input.placeholderText())
+print(window.settings_button.text())
+print('|'.join(labels))
+window.close()
+tmp.cleanup()
+"""
+        result = subprocess.run(
+            [sys.executable, "-c", code],
+            cwd=PROJECT_ROOT,
+            text=True,
+            capture_output=True,
+            timeout=10,
+            check=True,
+        )
+
+        self.assertIn("Local Search", result.stdout)
+        self.assertIn("Search local files, images, documents, clipboard", result.stdout)
+        self.assertIn("Settings", result.stdout)
+        self.assertIn("All|Images|Documents|Apps|Archives|Web|Other", result.stdout)
 
     def test_window_uses_frameless_spotlight_chrome(self) -> None:
         self.assertTrue(bool(self.window.windowFlags() & Qt.FramelessWindowHint))

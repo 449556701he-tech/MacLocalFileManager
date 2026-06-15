@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from i18n import tr
+
 
 CATEGORY_ALL = "all"
 CATEGORY_SMART = "smart"
@@ -20,20 +22,20 @@ CATEGORY_OTHER = "other"
 
 
 CATEGORY_LABELS = {
-    CATEGORY_ALL: "全部",
-    CATEGORY_SMART: "语义搜索",
-    CATEGORY_IMAGES: "图片",
-    CATEGORY_DOCUMENTS: "文档",
-    CATEGORY_DRAWINGS: "图纸",
+    CATEGORY_ALL: tr("全部"),
+    CATEGORY_SMART: tr("语义搜索"),
+    CATEGORY_IMAGES: tr("图片"),
+    CATEGORY_DOCUMENTS: tr("文档"),
+    CATEGORY_DRAWINGS: tr("图纸"),
     CATEGORY_CAD: "CAD",
-    CATEGORY_BILLS: "清单",
-    CATEGORY_APPS: "应用",
-    CATEGORY_VIDEOS: "视频",
-    CATEGORY_AUDIO: "音频",
-    CATEGORY_FOLDERS: "文件夹",
-    CATEGORY_WEB: "网页",
-    CATEGORY_ARCHIVES: "压缩包",
-    CATEGORY_OTHER: "其他",
+    CATEGORY_BILLS: tr("清单"),
+    CATEGORY_APPS: tr("应用"),
+    CATEGORY_VIDEOS: tr("视频"),
+    CATEGORY_AUDIO: tr("音频"),
+    CATEGORY_FOLDERS: tr("文件夹"),
+    CATEGORY_WEB: tr("网页"),
+    CATEGORY_ARCHIVES: tr("压缩包"),
+    CATEGORY_OTHER: tr("其他"),
 }
 
 IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "heic", "heif", "webp", "gif", "bmp", "tiff", "tif"}

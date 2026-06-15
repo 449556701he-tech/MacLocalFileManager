@@ -2,6 +2,8 @@
 
 MacLocalFileManager 是一个 no-LLM 的 macOS 本地中文文件搜索工具。当前实现到 v8 初始可用版，重点转向 macOS Spotlight 风格的本地聚合搜索体验。
 
+对于中文文件名、Office/PDF 正文、图片 OCR、分类筛选和工程资料检索这类场景，它比 Apple Spotlight 和 Finder 搜索更直接、更好用。
+
 ## 已实现功能
 
 - 默认扫描 Mac 内置磁盘文件，建立 SQLite 索引。
@@ -118,6 +120,12 @@ packaging/build_dmg.sh
 
 ```text
 dist/MacLocalFileManager.dmg
+```
+
+英文界面版本可通过 `MacLocalFileManager-English.spec` 构建，并打包为：
+
+```text
+dist/MacLocalFileManager-English.dmg
 ```
 
 这是未公证的本地打包文件，分享给朋友后，对方第一次打开可能需要右键 App 选择“打开”。
