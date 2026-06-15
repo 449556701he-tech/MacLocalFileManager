@@ -10,6 +10,29 @@ A free and open-source Spotlight-like local search tool for macOS.
 
 For Chinese filenames, Office/PDF content, image OCR text, category filters, and engineering-document workflows, it aims to be more direct and practical than Apple Spotlight and Finder search.
 
+## 界面预览
+
+折叠态保持轻量，不占用屏幕注意力。打开后位于屏幕上方黄金分割阅读位，适合快速输入关键词。
+
+![Collapsed Spotlight-like search window](MacLocalFileManager/docs/ui/v8-spotlight-home.png)
+
+输入关键词后自动展开结果窗口，搜索框、筛选栏、图片识别结果和文件列表集中在同一个透明圆角界面里。
+
+![Expanded local search results window](MacLocalFileManager/docs/ui/v8-ui-entry-mvp.png)
+
+## 为什么做这个
+
+Spotlight 适合快速打开应用和系统项目，Finder 搜索适合在文件夹里查找文件。但在真实本地资料场景里，尤其是中文文件名、Word/Excel/PDF 正文、图片 OCR、压缩包、图纸、CAD、清单等资料混在一起时，搜索入口经常不够直接。
+
+MacLocalFileManager 试图把这些日常需求放在一个更清晰的本地窗口里：
+
+- 打开就是搜索，不需要先进入某个文件夹。
+- 输入后直接展开结果，不需要在多个窗口之间切换。
+- 图片、文档、应用、压缩包、网页和其他文件可直接筛选。
+- 图片结果优先显示缩略图，文档结果显示路径、时间、大小和内容摘要。
+- 工程类筛选默认隐藏，普通用户界面更简洁；需要时可在设置中打开图纸 / CAD / 清单。
+- 索引保存在本机，不上传文件，也不依赖在线 AI。
+
 ## 当前亮点
 
 - macOS Spotlight 风格的无边框半透明窗口。
