@@ -11,3 +11,16 @@ MacLocalFileManager/data/*.sqlite3-*
 MacLocalFileManager/logs/*
 !MacLocalFileManager/logs/.gitkeep
 
+# Codex local workspace
+work/*
+!work/.gitkeep
+outputs/*
+!outputs/.gitkeep
+
+# Credentials and local caches
+auth.json
+*.key
+*.pem
+*.token
+.env
+.env.*
