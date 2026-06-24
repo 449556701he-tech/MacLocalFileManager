@@ -14,10 +14,20 @@ class PackagingSpecTest(unittest.TestCase):
             "semantic.indexer",
             "semantic.search",
             "semantic.vector_store",
+            "macos_integration",
+            "AppKit",
             "semantic.backends.deterministic",
             "semantic.backends.apple_vision",
         ]:
             self.assertIn(f'"{module}"', spec_text)
+
+    def test_release_specs_are_v1_1_and_include_macos_integration(self) -> None:
+        for spec_name in ["MacLocalFileManager.spec", "MacLocalFileManager-English.spec"]:
+            spec_text = (PROJECT_ROOT / spec_name).read_text(encoding="utf-8")
+
+            self.assertIn('"CFBundleShortVersionString": "1.1.0"', spec_text)
+            self.assertIn('"CFBundleVersion": "1.1.0"', spec_text)
+            self.assertIn('"macos_integration"', spec_text)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 # MacLocalFileManager
 
-MacLocalFileManager 是一个免费开源的 macOS 本地聚合搜索工具。当前版本为 beta1.0。
+MacLocalFileManager 是一个免费开源的 macOS 本地聚合搜索工具。v1.1 已把 beta1.0 的 Spotlight 风格搜索窗接入菜单栏和全局快捷键，日常使用更接近 macOS 原生小工具。
 
 它的起因很简单：macOS 自带搜索有时候真的让人挠头。
 
@@ -47,6 +47,8 @@ MacLocalFileManager 想解决的就是这些很日常、但很烦人的小问题
 
 - 类 Spotlight 的无边框半透明窗口。
 - 折叠态在屏幕上方黄金分割阅读位打开，输入后展开并居中。
+- 菜单栏常驻，支持显示/隐藏搜索窗口。
+- 全局快捷键 `⌃F` 快速唤起，避免抢占系统 Spotlight / Finder 搜索和输入法切换。
 - 可以手动拖动窗口；拖过以后就尊重你的位置，不再自作主张。
 - 搜索本地文件名、路径、文档内容、PDF、Office 文档和图片 OCR 文本。
 - 图片结果优先以缩略图展示，其他文件以列表展示。
@@ -62,7 +64,9 @@ MacLocalFileManager 想解决的就是这些很日常、但很烦人的小问题
 
 ```text
 MacLocalFileManager/dist/MacLocalFileManager.dmg
+MacLocalFileManager/dist/MacLocalFileManager-v1.1.0.dmg
 MacLocalFileManager/dist/MacLocalFileManager-English.dmg
+MacLocalFileManager/dist/MacLocalFileManager-English-v1.1.0.dmg
 ```
 
 打开 DMG 后将 App 拖到 Applications。由于当前未做 Apple notarization，第一次打开可能需要右键 App 选择“打开”。中文用户建议下载默认版；英文用户可下载 English 版。
@@ -118,4 +122,4 @@ cd MacLocalFileManager
 
 ## 状态说明
 
-这是一个 beta1.0 早期可用版，当前优先打磨 macOS 本地搜索体验。图片 OCR、图片标签识别和 FeaturePrint 相似图片特征优先借助 Apple Vision 系统能力；后续计划包括全局快捷键、菜单栏入口、无感唤起、更加稳定的索引刷新机制和更完善的本地图文理解能力。
+v1.1 已固化菜单栏常驻、白底圆角快捷面板、`⌃F` 全局唤起和关闭后后台保留。图片 OCR、图片标签识别和 FeaturePrint 相似图片特征优先借助 Apple Vision 系统能力；后续计划包括开机启动、更无感的后台索引刷新、剪切板聚合搜索和 Core Spotlight 混合架构。

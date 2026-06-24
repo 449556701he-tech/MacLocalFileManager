@@ -61,6 +61,7 @@ from semantic.config import (
     SEMANTIC_PDF_ENABLED_SETTING,
 )
 from semantic.search import SemanticSearcher
+from macos_integration import HOTKEY_ENABLED_SETTING
 
 ENGINEERING_MODE_SETTING = "engineering_filters_enabled"
 ENGINEERING_FILTER_CATEGORIES = (CATEGORY_DRAWINGS, CATEGORY_CAD, CATEGORY_BILLS)
@@ -157,6 +158,8 @@ class MainWindow(QMainWindow):
         self.pending_search: tuple[str, bool] | None = None
         self.close_after_search = False
         self.is_closing = False
+        self.close_to_background = False
+        self.search_focus_requested = False
         self._dragging_window = False
         self._drag_position = None
         self._user_moved_window = False
@@ -317,6 +320,10 @@ class MainWindow(QMainWindow):
         return max(screen_rect.top(), min(y, screen_rect.bottom() - self.height() + 1))
 
     def closeEvent(self, event) -> None:  # noqa: N802 - Qt override naming.
+        if self.close_to_background and not self.is_closing:
+            self.hide()
+            event.ignore()
+            return
         self.is_closing = True
         self.search_timer.stop()
         self.pending_search = None
@@ -638,6 +645,18 @@ class MainWindow(QMainWindow):
         display_title = QLabel(tr("显示选项"))
         display_title.setProperty("sidebarTitle", True)
         layout.addWidget(display_title)
+        hotkey_checkbox = QCheckBox(tr("启用全局快捷键（⌃F）"))
+        hotkey_checkbox.setObjectName("globalHotkeyCheckbox")
+        hotkey_checkbox.setChecked(self.db.get_bool_setting(HOTKEY_ENABLED_SETTING, True))
+
+        def set_global_hotkey_enabled(value: bool) -> None:
+            self.db.set_bool_setting(HOTKEY_ENABLED_SETTING, value)
+            self.status_label.show()
+            self.status_label.setText(tr("全局快捷键设置将在下次启动后生效"))
+
+        hotkey_checkbox.toggled.connect(set_global_hotkey_enabled)
+        layout.addWidget(hotkey_checkbox)
+
         engineering_checkbox = QCheckBox(tr("工程模式：显示图纸 / CAD / 清单分类"))
         engineering_checkbox.setChecked(self.db.get_bool_setting(ENGINEERING_MODE_SETTING, False))
 

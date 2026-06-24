@@ -8,12 +8,18 @@ from indexer import FileIndexer
 
 def main() -> int:
     from PySide6.QtWidgets import QApplication
+    from macos_integration import MacOSAppController, should_install_macos_integration
     from ui.main_window import MainWindow
 
     app = QApplication(sys.argv)
     db = FileDatabase()
     ensure_default_managed_dirs(db)
     window = MainWindow(db)
+    controller = None
+    if should_install_macos_integration():
+        controller = MacOSAppController(app, window, db)
+        controller.install()
+        app.macos_controller = controller
     window.show()
     return app.exec()
 

@@ -25,7 +25,9 @@ a = Analysis(
         "Foundation",
         "Vision",
         "Quartz",
+        "AppKit",
         "objc",
+        "macos_integration",
         "semantic",
         "semantic.backends",
         "semantic.backends.apple_vision",
@@ -85,8 +87,8 @@ app = BUNDLE(
     info_plist={
         "CFBundleName": "MacLocalFileManager",
         "CFBundleDisplayName": "MacLocalFileManager",
-        "CFBundleShortVersionString": "1.0.0",
-        "CFBundleVersion": "1.0.0-beta1",
+        "CFBundleShortVersionString": "1.1.0",
+        "CFBundleVersion": "1.1.0",
         "NSHighResolutionCapable": True,
     },
 )
